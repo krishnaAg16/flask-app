@@ -28,6 +28,17 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Run App
+    - name: Install ngrok
       run: |
-        python app.py --host=0.0.0.0 --port=5000
+        curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+        sudo apt update && sudo apt install ngrok
+
+    - name: Start Flask with ngrok
+      run: |
+        export FLASK_APP=app.py
+        flask run --host=0.0.0.0 --port=5000 &
+        ngrok http 5000 > /dev/null &
+        sleep 5
+        curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+
